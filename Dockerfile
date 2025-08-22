@@ -1,35 +1,23 @@
-FROM ubuntu:22.04
+# Use the official n8n base image
+FROM docker.n8n.io/n8nio/n8n:latest
 
-# Prevent tzdata from asking interactive questions
-ENV DEBIAN_FRONTEND=noninteractive
+# Set environment variables
+ENV GENERIC_TIMEZONE="UTC"
+ENV TZ="UTC"
+ENV N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+ENV N8N_RUNNERS_ENABLED=true
 
-# Install Apache, PHP, MariaDB, and tools
-RUN apt-get update && \
-    apt-get install -y apache2 php php-mysql libapache2-mod-php \
-    mariadb-server wget unzip tzdata && \
-    rm -rf /var/lib/apt/lists/*
+# Expose the n8n default port
+EXPOSE 5678
 
-# Reset frontend back to normal
-ENV DEBIAN_FRONTEND=dialog
+# (Optional) Install extra dependencies
+# RUN apk add --no-cache curl nano
 
-# Download and install WordPress
-RUN wget https://wordpress.org/latest.tar.gz && \
-    tar -xvzf latest.tar.gz && \
-    rm latest.tar.gz && \
-    mv wordpress /var/www/html/ && \
-    chown -R www-data:www-data /var/www/html/wordpress
+# Set working directory
+WORKDIR /home/node
 
-# Configure Apache
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf && \
-    a2enmod rewrite
+# Volume for n8n data
+VOLUME ["/home/node/.n8n"]
 
-# Expose web port
-EXPOSE 80
-
-# Start MariaDB, initialize WordPress DB, then run Apache
-CMD service mariadb start && \
-    mysql -u root -e "CREATE DATABASE IF NOT EXISTS wpdb; \
-              CREATE USER IF NOT EXISTS 'wpuser'@'localhost' IDENTIFIED BY 'wppass'; \
-              GRANT ALL PRIVILEGES ON wpdb.* TO 'wpuser'@'localhost'; \
-              FLUSH PRIVILEGES;" && \
-    apachectl -D FOREGROUND
+# Start n8n
+CMD ["n8n"]
